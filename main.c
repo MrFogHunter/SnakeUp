@@ -122,7 +122,10 @@ bool moveSnake(Snake* snake, Game* game) {
     bool ateFood = (next.x == game->food.x && next.y == game->food.y);
 
     // Déplacer le serpent
-    game->map[snake->body[snake->length - 1].y][snake->body[snake->length - 1].x] = ' ';
+    if (!ateFood) {
+        game->map[snake->body[snake->length - 1].y][snake->body[snake->length - 1].x] = ' ';
+    }
+
     for (int i = snake->length - 1; i > 0; i--) {
         snake->body[i] = snake->body[i - 1];
     }
@@ -130,6 +133,10 @@ bool moveSnake(Snake* snake, Game* game) {
     game->map[snake->body[0].y][snake->body[0].x] = '*';
 
     if (ateFood) {
+        if (snake->length < WIDTH * HEIGHT) { // Vérifie qu'on ne dépasse pas la taille maximale
+            snake->body[snake->length] = snake->body[snake->length - 1]; // Étendre la queue
+            snake->length++;
+        }
         game->generateFood(game);
     }
 
