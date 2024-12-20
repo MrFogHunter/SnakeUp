@@ -28,7 +28,7 @@ typedef struct {
 } Position;
 
 // Structure pour représenter le serpent
-typedef struct Snake {
+typedef struct {
     Position body[WIDTH * HEIGHT];
     int length;
     char direction;
@@ -37,9 +37,9 @@ typedef struct Snake {
 } Snake;
 
 // Structure pour représenter le jeu
-typedef struct Game {
+typedef struct {
     char map[HEIGHT][WIDTH];
-    struct Snake snake;
+    Snake snake;
     Position food;
     void (*initializeMap)(struct Game* game);
     void (*generateFood)(struct Game* game);
@@ -60,7 +60,7 @@ void initializeMap(Game* game) {
 }
 
 // Fonction pour initialiser le serpent
-void initializeSnake(struct Snake* snake, char map[HEIGHT][WIDTH]) {
+void initializeSnake(Snake* snake, char map[HEIGHT][WIDTH]) {
     int startX = WIDTH / 2;
     int startY = HEIGHT / 2;
     snake->length = INITIAL_LENGTH;
@@ -73,7 +73,7 @@ void initializeSnake(struct Snake* snake, char map[HEIGHT][WIDTH]) {
 }
 
 // Fonction pour générer de la nourriture
-void generateFood(struct Game* game) {
+void generateFood(Game* game) {
     do {
         game->food.x = rand() % (WIDTH - 2) + 1;
         game->food.y = rand() % (HEIGHT - 2) + 1;
@@ -82,7 +82,7 @@ void generateFood(struct Game* game) {
 }
 
 // Fonction pour afficher la carte
-void displayMap(struct Game* game) {
+void displayMap(Game* game) {
     system("clear"); // Pour Linux/MacOS, utilisez "cls" pour Windows
     for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
@@ -93,23 +93,22 @@ void displayMap(struct Game* game) {
 }
 
 // Fonction pour déplacer le serpent
-bool moveSnake(struct Snake* snake, struct Game* game) {
+bool moveSnake(Snake* snake, Game* game) {
     Position next = snake->body[0];
 
     // Calculer la prochaine position en fonction de la direction actuelle
     if (snake->direction == UP) {
         next.y--;
+        if (next.y <= 0) next.y = HEIGHT - 2; // Traverse le haut avant le mur
     } else if (snake->direction == DOWN) {
         next.y++;
+        if (next.y >= HEIGHT - 1) next.y = 1; // Traverse le bas avant le mur
     } else if (snake->direction == LEFT) {
         next.x--;
+        if (next.x <= 0) next.x = WIDTH - 2; // Traverse la gauche avant le mur
     } else if (snake->direction == RIGHT) {
         next.x++;
-    }
-
-    // Vérifier si le serpent touche un mur
-    if (game->map[next.y][next.x] == '#') {
-        return false; // Game over
+        if (next.x >= WIDTH - 1) next.x = 1; // Traverse la droite avant le mur
     }
 
     // Vérifier si le serpent se mord lui-même
@@ -131,16 +130,14 @@ bool moveSnake(struct Snake* snake, struct Game* game) {
     game->map[snake->body[0].y][snake->body[0].x] = '*';
 
     if (ateFood) {
-        snake->length++;
         game->generateFood(game);
-        return true;
     }
 
     return true;
 }
 
 // Fonction pour gérer les entrées utilisateur
-void updateDirection(struct Snake* snake) {
+void updateDirection(Snake* snake) {
     if (_kbhit()) {
         char input = _getch();
         if ((input == UP && snake->direction != DOWN) ||
@@ -153,7 +150,7 @@ void updateDirection(struct Snake* snake) {
 }
 
 int main() {
-    struct Game game;
+    Game game;
     game.initializeMap = initializeMap;
     game.generateFood = generateFood;
     game.displayMap = displayMap;
@@ -170,6 +167,8 @@ int main() {
         updateDirection(&game.snake);
         if (!game.snake.move(&game.snake, &game)) {
             printf("Game Over!\n");
+            printf("Appuyez sur une touche pour quitter...\n");
+            _getch(); // Attendre une entrée de l'utilisateur avant de fermer
             break;
         }
         SLEEP(200); // Pause pour ralentir le jeu (200 ms)
