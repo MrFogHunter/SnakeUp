@@ -59,6 +59,24 @@ void initializeMap(Game* game) {
     }
 }
 
+// Fonction pour réinitialiser la carte à chaque étape
+void resetMap(Game* game) {
+    // Réinitialiser tout sauf les murs
+    for (int i = 1; i < HEIGHT - 1; i++) {
+        for (int j = 1; j < WIDTH - 1; j++) {
+            game->map[i][j] = ' ';
+        }
+    }
+
+    // Replacer la nourriture
+    game->map[game->food.y][game->food.x] = 'o';
+
+    // Replacer le serpent
+    for (int i = 0; i < game->snake.length; i++) {
+        game->map[game->snake.body[i].y][game->snake.body[i].x] = '*';
+    }
+}
+
 // Fonction pour initialiser le serpent
 void initializeSnake(Snake* snake, char map[HEIGHT][WIDTH]) {
     int startX = WIDTH / 2;
@@ -121,20 +139,20 @@ bool moveSnake(Snake* snake, Game* game) {
     // Vérifier si le serpent mange la nourriture
     bool ateFood = (next.x == game->food.x && next.y == game->food.y);
 
-    // Déplacer le serpent
-    if (!ateFood) {
-        game->map[snake->body[snake->length - 1].y][snake->body[snake->length - 1].x] = ' ';
-    }
-
+    // Déplacer le corps du serpent
+    Position lastTail = snake->body[snake->length - 1]; // Stocker l'ancienne queue
     for (int i = snake->length - 1; i > 0; i--) {
         snake->body[i] = snake->body[i - 1];
     }
-    snake->body[0] = next;
-    game->map[snake->body[0].y][snake->body[0].x] = '*';
 
+    // Mettre à jour la tête du serpent
+    snake->body[0] = next;
+
+    // Si le serpent mange un fruit
     if (ateFood) {
-        if (snake->length < WIDTH * HEIGHT) { // Vérifie qu'on ne dépasse pas la taille maximale
-            snake->body[snake->length] = snake->body[snake->length - 1]; // Étendre la queue
+        if (snake->length < WIDTH * HEIGHT) {
+            // Ajouter une nouvelle case au corps du serpent
+            snake->body[snake->length] = lastTail;
             snake->length++;
         }
         game->generateFood(game);
@@ -170,6 +188,7 @@ int main() {
     game.generateFood(&game);
 
     while (true) {
+        resetMap(&game); // Réinitialise la carte à chaque étape
         game.displayMap(&game);
         updateDirection(&game.snake);
         if (!game.snake.move(&game.snake, &game)) {
