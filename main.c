@@ -28,7 +28,7 @@ typedef struct {
 } Position;
 
 // Structure pour représenter le serpent
-typedef struct {
+typedef struct Snake {
     Position body[WIDTH * HEIGHT];
     int length;
     char direction;
@@ -37,17 +37,18 @@ typedef struct {
 } Snake;
 
 // Structure pour représenter le jeu
-typedef struct {
+typedef struct Game {
     char map[HEIGHT][WIDTH];
-    Snake snake;
+    struct Snake snake;
     Position food;
     void (*initializeMap)(struct Game* game);
     void (*generateFood)(struct Game* game);
     void (*displayMap)(struct Game* game);
+    int score; // Ajout du score
 } Game;
 
 // Fonction pour initialiser la carte
-void initializeMap(Game* game) {
+void initializeMap(struct Game* game) {
     for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
             if (i == 0 || i == HEIGHT - 1 || j == 0 || j == WIDTH - 1) {
@@ -59,26 +60,38 @@ void initializeMap(Game* game) {
     }
 }
 
+// Fonction pour afficher le score
+void displayScore(struct Game* game) {
+    printf("Score: %d\n", game->score);
+}
+
+// Fonction pour sauvegarder le score dans un fichier
+void saveScoreToFile(int score) {
+    FILE *file = fopen("score.txt", "a");
+    if (file != NULL) {
+        fprintf(file, "Score: %d\n", score);
+        fclose(file);
+    } else {
+        printf("Impossible d'ouvrir le fichier pour enregistrer le score.\n");
+    }
+}
+
 // Fonction pour réinitialiser la carte à chaque étape
-void resetMap(Game* game) {
-    // Réinitialiser tout sauf les murs
+void resetMap(struct Game* game) {
     for (int i = 1; i < HEIGHT - 1; i++) {
         for (int j = 1; j < WIDTH - 1; j++) {
             game->map[i][j] = ' ';
         }
     }
 
-    // Replacer la nourriture
     game->map[game->food.y][game->food.x] = 'o';
-
-    // Replacer le serpent
     for (int i = 0; i < game->snake.length; i++) {
         game->map[game->snake.body[i].y][game->snake.body[i].x] = '*';
     }
 }
 
 // Fonction pour initialiser le serpent
-void initializeSnake(Snake* snake, char map[HEIGHT][WIDTH]) {
+void initializeSnake(struct Snake* snake, char map[HEIGHT][WIDTH]) {
     int startX = WIDTH / 2;
     int startY = HEIGHT / 2;
     snake->length = INITIAL_LENGTH;
@@ -91,7 +104,7 @@ void initializeSnake(Snake* snake, char map[HEIGHT][WIDTH]) {
 }
 
 // Fonction pour générer de la nourriture
-void generateFood(Game* game) {
+void generateFood(struct Game* game) {
     do {
         game->food.x = rand() % (WIDTH - 2) + 1;
         game->food.y = rand() % (HEIGHT - 2) + 1;
@@ -100,7 +113,7 @@ void generateFood(Game* game) {
 }
 
 // Fonction pour afficher la carte
-void displayMap(Game* game) {
+void displayMap(struct Game* game) {
     system("clear"); // Pour Linux/MacOS, utilisez "cls" pour Windows
     for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
@@ -108,61 +121,56 @@ void displayMap(Game* game) {
         }
         printf("\n");
     }
+    displayScore(game);
 }
 
 // Fonction pour déplacer le serpent
-bool moveSnake(Snake* snake, Game* game) {
+bool moveSnake(struct Snake* snake, struct Game* game) {
     Position next = snake->body[0];
 
-    // Calculer la prochaine position en fonction de la direction actuelle
     if (snake->direction == UP) {
         next.y--;
-        if (next.y <= 0) next.y = HEIGHT - 2; // Traverse le haut avant le mur
+        if (next.y <= 0) next.y = HEIGHT - 2;
     } else if (snake->direction == DOWN) {
         next.y++;
-        if (next.y >= HEIGHT - 1) next.y = 1; // Traverse le bas avant le mur
+        if (next.y >= HEIGHT - 1) next.y = 1;
     } else if (snake->direction == LEFT) {
         next.x--;
-        if (next.x <= 0) next.x = WIDTH - 2; // Traverse la gauche avant le mur
+        if (next.x <= 0) next.x = WIDTH - 2;
     } else if (snake->direction == RIGHT) {
         next.x++;
-        if (next.x >= WIDTH - 1) next.x = 1; // Traverse la droite avant le mur
+        if (next.x >= WIDTH - 1) next.x = 1;
     }
 
-    // Vérifier si le serpent se mord lui-même
     for (int i = 0; i < snake->length; i++) {
         if (snake->body[i].x == next.x && snake->body[i].y == next.y) {
-            return false; // Game over
+            return false;
         }
     }
 
-    // Vérifier si le serpent mange la nourriture
     bool ateFood = (next.x == game->food.x && next.y == game->food.y);
-
-    // Déplacer le corps du serpent
-    Position lastTail = snake->body[snake->length - 1]; // Stocker l'ancienne queue
+    Position lastTail = snake->body[snake->length - 1];
     for (int i = snake->length - 1; i > 0; i--) {
         snake->body[i] = snake->body[i - 1];
     }
 
-    // Mettre à jour la tête du serpent
     snake->body[0] = next;
+    game->map[next.y][next.x] = '*';
 
-    // Si le serpent mange un fruit
-    if (ateFood) {
+    if (!ateFood) {
+        game->map[lastTail.y][lastTail.x] = ' ';
+    } else {
         if (snake->length < WIDTH * HEIGHT) {
-            // Ajouter une nouvelle case au corps du serpent
-            snake->body[snake->length] = lastTail;
             snake->length++;
         }
         game->generateFood(game);
+        game->score++; // Augmenter le score
     }
 
     return true;
 }
 
-// Fonction pour gérer les entrées utilisateur
-void updateDirection(Snake* snake) {
+void updateDirection(struct Snake* snake) {
     if (_kbhit()) {
         char input = _getch();
         if ((input == UP && snake->direction != DOWN) ||
@@ -175,7 +183,8 @@ void updateDirection(Snake* snake) {
 }
 
 int main() {
-    Game game;
+    struct Game game;
+    game.score = 0; // Initialiser le score
     game.initializeMap = initializeMap;
     game.generateFood = generateFood;
     game.displayMap = displayMap;
@@ -188,17 +197,19 @@ int main() {
     game.generateFood(&game);
 
     while (true) {
-        resetMap(&game); // Réinitialise la carte à chaque étape
+        resetMap(&game);
         game.displayMap(&game);
         updateDirection(&game.snake);
         if (!game.snake.move(&game.snake, &game)) {
             printf("Game Over!\n");
+            saveScoreToFile(game.score); // Sauvegarder le score
             printf("Appuyez sur une touche pour quitter...\n");
-            _getch(); // Attendre une entrée de l'utilisateur avant de fermer
+            _getch();
             break;
         }
-        SLEEP(200); // Pause pour ralentir le jeu (200 ms)
+        SLEEP(200);
     }
 
     return 0;
 }
+s
