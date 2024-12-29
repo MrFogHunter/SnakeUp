@@ -96,7 +96,7 @@ void initializeSnake(struct Snake* snake, char map[HEIGHT][WIDTH]) {
     int startX = WIDTH / 2;
     int startY = HEIGHT / 2;
     snake->length = INITIAL_LENGTH;
-    snake->capacity = INITIAL_LENGTH + 10;
+    snake->capacity = INITIAL_LENGTH + 100;
     snake->body = (Position*)malloc(snake->capacity * sizeof(Position));
     if (snake->body == NULL) {
         printf("Erreur d'allocation mémoire pour le serpent.\n");
