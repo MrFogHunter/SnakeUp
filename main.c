@@ -214,6 +214,7 @@ int main() {
         if (!game.snake.move(&game.snake, &game)) break;
         SLEEP(200);
     }
+    printf("Game Over! Score final: %d\n", game.score); // Message de game over
     saveScoreToFile(game.score); // Sauvegarde le score avant de quitter
     free(game.snake.body);
     return 0;
